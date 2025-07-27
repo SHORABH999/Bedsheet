@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PDF Generator Tool</title>
+  <title>Purchase Order PDF Generator</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
@@ -16,7 +16,7 @@
 </head>
 <body>
 
-<h1>Upload Images to Generate PDF</h1>
+<h1>Upload Images to Generate Purchase Order</h1>
 <input type="file" id="upload" multiple accept="image/*"><br><br>
 <div class="grid" id="preview-grid"></div>
 <button onclick="generatePDF()">Generate PDF</button>
@@ -35,11 +35,11 @@
         const container = document.createElement("div");
         container.className = "item";
 
-        const sku = file.name.replace(/\.[^/.]+$/, "");
+        const defaultSKU = file.name.replace(/\.[^/.]+$/, "");
         container.innerHTML = `
           <img src="${e.target.result}" />
-          <strong>${sku}</strong><br>
-          <input type="text" value="1 ROLL = 40 PCS" />
+          <input type="text" class="sku" value="${defaultSKU}" placeholder="Enter SKU Name" />
+          <input type="text" class="qty" value="1 ROLL = 40 PCS" placeholder="Enter Quantity" />
         `;
 
         grid.appendChild(container);
@@ -51,32 +51,64 @@
   async function generatePDF() {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.toLocaleString('default', { month: 'long' }).toUpperCase();
+    const year = today.getFullYear();
+    const fullDate = `${day} ${month} ${year}`;
+    const fileName = `REQUIREMENT ${fullDate}.pdf`;
+
+    let x = 40, y = 120, count = 0;
+    let totalRolls = 0;
+    let totalPcs = 0;
+
+    // Header
+    pdf.setFontSize(18);
+    pdf.text("COTTON BOLLS TEXTILE", pdf.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+    pdf.setFontSize(12);
+    pdf.text(fullDate, pdf.internal.pageSize.getWidth() / 2, 60, { align: "center" });
 
     const items = document.querySelectorAll(".item");
-    let x = 40, y = 60, count = 0;
 
     for (let i = 0; i < items.length; i++) {
       const imgTag = items[i].querySelector("img");
-      const sku = items[i].querySelector("strong").innerText;
-      const qty = items[i].querySelector("input").value;
+      const sku = items[i].querySelector(".sku").value;
+      const qtyText = items[i].querySelector(".qty").value;
 
       const imgData = await toDataURL(imgTag.src);
       pdf.addImage(imgData, "JPEG", x, y, 230, 150);
-      pdf.text(`${sku} — ${qty}`, x, y + 170);
+      pdf.setFontSize(10);
+      pdf.text(`${sku}`, x, y + 165);
+      pdf.text(`${qtyText}`, x, y + 180);
+
+      // Extract roll and PCS count
+      const match = qtyText.match(/(\d+)\s*ROLL.*?(\d+)\s*PCS/i);
+      if (match) {
+        totalRolls += parseInt(match[1]);
+        totalPcs += parseInt(match[2]);
+      }
 
       x += 270;
       count++;
       if (count % 2 === 0) {
         x = 40;
         y += 220;
-        if (y > 700) {
+        if (y > 680) {
           pdf.addPage();
           y = 60;
         }
       }
     }
 
-    pdf.save("order.pdf");
+    // Footer Summary
+    y += 40;
+    if (count % 2 === 1) y += 220; // shift footer to new row if odd number
+    pdf.setFontSize(12);
+    pdf.setTextColor(0);
+    pdf.text(`Total Rolls: ${totalRolls}`, 40, y);
+    pdf.text(`Total Quantity: ${totalPcs} PCS`, 200, y);
+
+    pdf.save(fileName);
   }
 
   function toDataURL(url) {
