@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PDF Generator Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; }
+    .grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    .item { width: 45%; border: 1px solid #ccc; padding: 10px; box-shadow: 0 0 5px #aaa; }
+    .item img { width: 100%; height: auto; }
+    .item input { width: 100%; margin-top: 5px; padding: 6px; }
+    button { padding: 10px 20px; font-size: 16px; margin: 20px auto; display: block; }
+  </style>
+</head>
+<body>
+
+<h1>Upload Images to Generate PDF</h1>
+<input type="file" id="upload" multiple accept="image/*"><br><br>
+<div class="grid" id="preview-grid"></div>
+<button onclick="generatePDF()">Generate PDF</button>
+
+<script>
+  const grid = document.getElementById("preview-grid");
+  document.getElementById("upload").addEventListener("change", handleFiles);
+
+  function handleFiles(event) {
+    grid.innerHTML = "";
+    const files = [...event.target.files];
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const container = document.createElement("div");
+        container.className = "item";
+
+        const sku = file.name.replace(/\.[^/.]+$/, "");
+        container.innerHTML = `
+          <img src="${e.target.result}" />
+          <strong>${sku}</strong><br>
+          <input type="text" value="1 ROLL = 40 PCS" />
+        `;
+
+        grid.appendChild(container);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+
+    const items = document.querySelectorAll(".item");
+    let x = 40, y = 60, count = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      const imgTag = items[i].querySelector("img");
+      const sku = items[i].querySelector("strong").innerText;
+      const qty = items[i].querySelector("input").value;
+
+      const imgData = await toDataURL(imgTag.src);
+      pdf.addImage(imgData, "JPEG", x, y, 230, 150);
+      pdf.text(`${sku} — ${qty}`, x, y + 170);
+
+      x += 270;
+      count++;
+      if (count % 2 === 0) {
+        x = 40;
+        y += 220;
+        if (y > 700) {
+          pdf.addPage();
+          y = 60;
+        }
+      }
+    }
+
+    pdf.save("order.pdf");
+  }
+
+  function toDataURL(url) {
+    return fetch(url)
+      .then(res => res.blob())
+      .then(blob => new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      }));
+  }
+</script>
+
+</body>
+</html>
