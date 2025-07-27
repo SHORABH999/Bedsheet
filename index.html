@@ -52,22 +52,23 @@
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "pt", format: "a4" });
 
-    // Format: DD/MM/YYYY
+    // Date formats
     const today = new Date();
     const dd = String(today.getDate()).padStart(2, '0');
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yyyy = today.getFullYear();
-    const formattedDate = `${dd}/${mm}/${yyyy}`;
-    const fileName = `REQUIREMENT ${formattedDate}.pdf`;
+    const displayDate = `${dd}/${mm}/${yyyy}`;
+    const monthName = today.toLocaleString('default', { month: 'long' }).toUpperCase();
+    const fileName = `REQUIREMENT ${dd} ${monthName} ${yyyy}.pdf`;
 
     // PDF Header
-    pdf.setFontSize(18);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("COTTON BOLLS TEXTILES", pdf.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(24);
+    pdf.text("Cotton Bolls Textiles", pdf.internal.pageSize.getWidth() / 2, 40, { align: "center" });
 
     pdf.setFontSize(12);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(formattedDate, pdf.internal.pageSize.getWidth() / 2, 60, { align: "center" });
+    pdf.setFont("times", "normal");
+    pdf.text(displayDate, pdf.internal.pageSize.getWidth() / 2, 60, { align: "center" });
 
     // Horizontal line
     pdf.setDrawColor(0);
@@ -87,11 +88,12 @@
 
       const imgData = await toDataURL(imgTag.src);
       pdf.addImage(imgData, "JPEG", x, y, 230, 150);
+      pdf.setFont("times", "normal");
       pdf.setFontSize(10);
       pdf.text(`${sku}`, x, y + 165);
       pdf.text(`${qtyText}`, x, y + 180);
 
-      // Extract roll and PCS count
+      // Extract total rolls & PCS
       const match = qtyText.match(/(\d+)\s*ROLL.*?(\d+)\s*PCS/i);
       if (match) {
         totalRolls += parseInt(match[1]);
@@ -110,11 +112,11 @@
       }
     }
 
-    // Footer Totals
+    // Footer totals
     y += 40;
-    if (count % 2 === 1) y += 220; // move down if only one item in last row
+    if (count % 2 === 1) y += 220;
+    pdf.setFont("times", "bold");
     pdf.setFontSize(12);
-    pdf.setFont("helvetica", "bold");
     pdf.text(`Total Rolls: ${totalRolls}`, 40, y);
     pdf.text(`Total Quantity: ${totalPcs} PCS`, 200, y);
 
