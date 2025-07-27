@@ -51,22 +51,32 @@
   async function generatePDF() {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    const today = new Date();
-    const day = today.getDate();
-    const month = today.toLocaleString('default', { month: 'long' }).toUpperCase();
-    const year = today.getFullYear();
-    const fullDate = `${day} ${month} ${year}`;
-    const fileName = `REQUIREMENT ${fullDate}.pdf`;
 
-    let x = 40, y = 120, count = 0;
+    // Format: DD/MM/YYYY
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const formattedDate = `${dd}/${mm}/${yyyy}`;
+    const fileName = `REQUIREMENT ${formattedDate}.pdf`;
+
+    // PDF Header
+    pdf.setFontSize(18);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("COTTON BOLLS TEXTILES", pdf.internal.pageSize.getWidth() / 2, 40, { align: "center" });
+
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(formattedDate, pdf.internal.pageSize.getWidth() / 2, 60, { align: "center" });
+
+    // Horizontal line
+    pdf.setDrawColor(0);
+    pdf.setLineWidth(0.5);
+    pdf.line(40, 70, pdf.internal.pageSize.getWidth() - 40, 70);
+
+    let x = 40, y = 100, count = 0;
     let totalRolls = 0;
     let totalPcs = 0;
-
-    // Header
-    pdf.setFontSize(18);
-    pdf.text("COTTON BOLLS TEXTILE", pdf.internal.pageSize.getWidth() / 2, 40, { align: "center" });
-    pdf.setFontSize(12);
-    pdf.text(fullDate, pdf.internal.pageSize.getWidth() / 2, 60, { align: "center" });
 
     const items = document.querySelectorAll(".item");
 
@@ -95,16 +105,16 @@
         y += 220;
         if (y > 680) {
           pdf.addPage();
-          y = 60;
+          y = 100;
         }
       }
     }
 
-    // Footer Summary
+    // Footer Totals
     y += 40;
-    if (count % 2 === 1) y += 220; // shift footer to new row if odd number
+    if (count % 2 === 1) y += 220; // move down if only one item in last row
     pdf.setFontSize(12);
-    pdf.setTextColor(0);
+    pdf.setFont("helvetica", "bold");
     pdf.text(`Total Rolls: ${totalRolls}`, 40, y);
     pdf.text(`Total Quantity: ${totalPcs} PCS`, 200, y);
 
